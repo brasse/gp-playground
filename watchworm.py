@@ -1,48 +1,58 @@
-import sys
+import pyglet
+from pyglet.gl import *
 
-import pygame
-from pygame.locals import *
-
-class WatchWorm(object):
-
+class WormWindow(pyglet.window.Window):
     CELL_SIZE = 15
+    STEP_TIME = 1
+    BORDER = 1
+    BODY_COLOR = (0.0, 0.0, 1.0)
+    HEAD_COLOR = (1.0, 1.0, 1.0)
     
-    def __init__(self, grid_size):
-        self.grid_size = grid_size
+    def __init__(self, grid_size, path):
+        self.path = path
+        self.window_size = self.CELL_SIZE * grid_size
+        self.visible_steps = 0
+        pyglet.window.Window.__init__(self,
+                                      width=self.window_size,
+                                      height=self.window_size,
+                                      caption='watchworm')
 
-        pygame.display.init()
-        self.s = pygame.display.set_mode((grid_size * self.CELL_SIZE,
-                                          grid_size * self.CELL_SIZE))
+        pyglet.clock.schedule_interval(self.step, self.STEP_TIME)
 
-        colors = [(255, 255, 255), (255, 0, 0)]
-        i = 0
-        for yi in xrange(grid_size):
-            for xi in xrange(grid_size):
-                self.set_cell_color((xi, yi), colors[i % len(colors)])
-                i += 1
+    def step(self, dt):
+        self.visible_steps += 1
+        if self.visible_steps > len(self.path):
+            self.visible_steps = len(self.path)
+            
+    def set_cell_color(self, position, color):
+        x, y = position
+        left = x * self.CELL_SIZE + self.BORDER
+        lower = y * self.CELL_SIZE + self.BORDER
+        side = self.CELL_SIZE - 2 * self.BORDER
+        vs = (left, lower, 
+              left + side, lower,
+              left + side, lower + side,
+              left, lower + side)
+        glColor3f(*color)
+        pyglet.graphics.draw(4, pyglet.gl.GL_QUADS, ('v2i', vs))
 
-        pygame.display.flip()
+    def on_draw(self):
+        glClearColor(0.3, 0.3, 0.4, 1.0) # Dark grey
+        self.clear()
+        # draw body
+        for cell in self.path[:self.visible_steps]:
+            self.set_cell_color(cell, self.BODY_COLOR)
+        # draw head
+        if self.visible_steps:
+            self.set_cell_color(self.path[self.visible_steps - 1],
+                                self.HEAD_COLOR)
+            
+def process(grid_size, path=None, program=None):
+    window = WormWindow(grid_size, [(0, 0), (0, 1), (1, 1)])
+    pyglet.app.run()
 
-    def set_cell_color(self, cell, color):
-        border = 1
-        x, y = cell
-        r = pygame.Rect(x * self.CELL_SIZE + border,
-                        y * self.CELL_SIZE + border,
-                        self.CELL_SIZE - 2 * border,
-                        self.CELL_SIZE - 2 * border)
-        self.s.fill(color, r)
-
-    def run(self):
-        while True: 
-            for event in pygame.event.get(): 
-                if event.type == QUIT:
-                    return
-                else: 
-                    print event 
-    
 def main():
-    ww = WatchWorm(10)
-    ww.run()
-    
+    process(10)
+
 if __name__ == '__main__':
     main()

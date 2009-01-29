@@ -66,6 +66,29 @@ def step(program, instruction_index, position, heading, grid_size):
         return (instruction_index + 1, move(position, heading, grid_size),
                 heading)
 
+def run(program, position, heading, grid_size, max_steps):
+    '''
+    Run the program for max_steps number of steps and return the path
+    that the worm travelled. The same position may appear in sequence
+    if it spent more than one step in that position (i.e. made a turn).
+
+    >>> run([MOVE_FORWARD], (0, 0), EAST, 3, 3)
+    [(0, 0), (1, 0), (2, 0), (2, 0)]
+    >>> run([MOVE_FORWARD, TURN_LEFT, MOVE_FORWARD, MOVE_FORWARD],
+    ...     (1, 1), EAST, 3, 4)
+    [(1, 1), (2, 1), (2, 1), (2, 2), (2, 2)]
+    >>> run([MOVE_FORWARD, TURN_RIGHT], (1, 1), EAST, 3, 5)
+    [(1, 1), (2, 1), (2, 1), (2, 0), (2, 0), (1, 0)]
+    '''
+
+    path = [position]
+    instruction_index = 0
+    for _ in xrange(max_steps):
+        instruction_index, position, heading = \
+            step(program, instruction_index, position, heading, grid_size)
+        path.append(position)
+    return path
+
 if __name__ == '__main__':
     import doctest
     doctest.testmod()
