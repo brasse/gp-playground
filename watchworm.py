@@ -1,3 +1,5 @@
+from itertools import *
+
 import pyglet
 from pyglet.gl import *
 
@@ -16,36 +18,30 @@ class WormWindow(pyglet.window.Window):
                                       width=self.window_size,
                                       height=self.window_size,
                                       caption='watchworm')
-
         pyglet.clock.schedule_interval(self.step, self.STEP_TIME)
 
     def step(self, dt):
         self.visible_steps += 1
-        if self.visible_steps > len(self.path):
-            self.visible_steps = len(self.path)
+        if self.visible_steps == len(self.path):
+            pyglet.clock.unschedule(self.step)
             
-    def set_cell_color(self, position, color):
+    def draw_cell(self, position, color):
         x, y = position
         left = x * self.CELL_SIZE + self.BORDER
         lower = y * self.CELL_SIZE + self.BORDER
-        side = self.CELL_SIZE - 2 * self.BORDER
-        vs = (left, lower, 
-              left + side, lower,
-              left + side, lower + side,
-              left, lower + side)
+        side = self.CELL_SIZE - 1 - 2 * self.BORDER
         glColor3f(*color)
-        pyglet.graphics.draw(4, pyglet.gl.GL_QUADS, ('v2i', vs))
-
+        glRecti(left, lower, left + side, lower + side)
+        
     def on_draw(self):
-        glClearColor(0.3, 0.3, 0.4, 1.0) # Dark grey
+        glClearColor(0.3, 0.3, 0.4, 1.0)
         self.clear()
-        # draw body
-        for cell in self.path[:self.visible_steps]:
-            self.set_cell_color(cell, self.BODY_COLOR)
-        # draw head
-        if self.visible_steps:
-            self.set_cell_color(self.path[self.visible_steps - 1],
-                                self.HEAD_COLOR)
+        # Create the visible part of the worm, the head is first in the list.
+        worm = izip(reversed(self.path[:self.visible_steps]),
+                    chain([self.HEAD_COLOR], repeat(self.BODY_COLOR)))
+        for cell_position, color in worm:
+            self.draw_cell(cell_position, color)
+        
             
 def process(grid_size, path=None, program=None):
     window = WormWindow(grid_size, [(0, 0), (0, 1), (1, 1)])
