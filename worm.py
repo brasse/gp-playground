@@ -1,3 +1,7 @@
+import gp
+
+import random
+
 TURN_LEFT = 0
 TURN_RIGHT = 1
 MOVE_FORWARD = 2
@@ -89,6 +93,19 @@ def run(program, position, heading, grid_size, max_steps):
         path.append(position)
     return path
 
-if __name__ == '__main__':
+def random_program(length):
+    return [random.randint(TURN_LEFT, MOVE_FORWARD) for _ in xrange(length)]
+
+def fitness(position, heading, grid_size, max_steps):
+    def f(program):
+        path = run(program, position, heading, grid_size, max_steps)
+        return len(set(path))
+    return f
+
+def test():
     import doctest
     doctest.testmod()
+    
+if __name__ == '__main__':
+    initial_population = [random_program(5) for _ in xrange(10)]
+    gp.gp(initial_population, fitness((0, 0), NORTH, 20, 500), None, None)
