@@ -1,5 +1,6 @@
 import gp
 
+import functools
 import random
 
 TURN_LEFT = 0
@@ -102,10 +103,24 @@ def fitness(position, heading, grid_size, max_steps):
         return len(set(path))
     return f
 
+def termination_condition(evaluated_population, generation):
+    return evaluated_population[0][0] > 100
+
 def test():
     import doctest
     doctest.testmod()
     
 if __name__ == '__main__':
-    initial_population = [random_program(5) for _ in xrange(10)]
-    gp.gp(initial_population, fitness((0, 0), NORTH, 20, 500), None, None)
+    initial_population = [random_program(5) for _ in xrange(100)]
+    keep = 15
+    start_position = (0, 0)
+    start_heading = NORTH
+    grid_size = 20
+    max_steps = int(grid_size * grid_size * 1.2)
+    fitness_function = fitness(start_position, start_heading,
+                               grid_size, max_steps)
+    selection_function = gp.truncation_selection(keep)
+    operations = [(0.1, gp.mutate(functools.partial(random_program, 5)))]
+    gp.gp(initial_population, fitness_function,
+          selection_function, operations,
+          termination_condition)
