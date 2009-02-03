@@ -1,6 +1,8 @@
 import gp
+import watchworm
 
 import functools
+import itertools
 import random
 
 TURN_LEFT = 0
@@ -95,7 +97,8 @@ def run(program, position, heading, grid_size, max_steps):
     return path
 
 def random_program(length):
-    return [random.randint(TURN_LEFT, MOVE_FORWARD) for _ in xrange(length)]
+    return [random.choice((TURN_LEFT, TURN_RIGHT, MOVE_FORWARD))
+            for _ in xrange(length)]
 
 def fitness(position, heading, grid_size, max_steps):
     def f(program):
@@ -103,24 +106,40 @@ def fitness(position, heading, grid_size, max_steps):
         return len(set(path))
     return f
 
-def termination_condition(evaluated_population, generation):
-    return evaluated_population[0][0] > 100
-
 def test():
     import doctest
     doctest.testmod()
     
 if __name__ == '__main__':
-    initial_population = [random_program(5) for _ in xrange(100)]
+    population = [random_program(5) for _ in xrange(100)]
     keep = 15
     start_position = (0, 0)
     start_heading = NORTH
-    grid_size = 20
-    max_steps = int(grid_size * grid_size * 1.2)
+    grid_size = 10
+    max_steps = pow(grid_size, 2) * 2
     fitness_function = fitness(start_position, start_heading,
                                grid_size, max_steps)
     selection_function = gp.truncation_selection(keep)
-    operations = [(0.1, gp.mutate(functools.partial(random_program, 5)))]
-    gp.gp(initial_population, fitness_function,
-          selection_function, operations,
-          termination_condition)
+    operations = [(0.05, gp.mutate(functools.partial(random_program, 5))),
+                  (0.15, gp.crossover)]
+
+    step_seq = itertools.chain(itertools.repeat(5, 5),
+                               itertools.repeat(100, 5),
+                               itertools.repeat(1000))
+    g = 0
+    while True:
+        steps = step_seq.next()
+        termination_condition = lambda ep, g: g == steps
+        population = gp.gp(population, fitness_function,
+                           selection_function, operations,
+                           termination_condition)
+        g += steps
+        path = run(population[0], start_position, start_heading,
+                   grid_size, max_steps)
+        print 'generation: %d' % g
+        fitness = len(set(path))
+        print 'fitness:    %d (%.2f)' % (fitness,
+                                         fitness / pow(grid_size, 2.0)) 
+        print 'length:     %d' % len(population[0])
+        print
+        watchworm.process(grid_size, path)

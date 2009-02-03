@@ -12,14 +12,14 @@ def gp(population, fitness, selection, operations, termination_condition):
     generation = 0
     while True:
         evaluated_population, next_generation = \
-            _gp_step(population, fitness, selection, operations)
+            _gp_generation(population, fitness, selection, operations)
         generation += 1
         if termination_condition(evaluated_population, generation):
             break
         population = next_generation
-    print evaluated_population[0]
+    return [i for _, i in evaluated_population]
     
-def _gp_step(population, fitness, selection, operations):
+def _gp_generation(population, fitness, selection, operations):
     evaluated_population = []
     # Evaluate each indiviual.
     for i in population:
@@ -34,8 +34,8 @@ def _gp_step(population, fitness, selection, operations):
         operation = _pick_operation(operations)
         arity = operation.func_code.co_argcount
         individuals = (selection(evaluated_population) for _ in xrange(arity))
-        next_generation.append(operation(*individuals))
-
+        next_generation.extend(operation(*individuals))
+        
     return evaluated_population, next_generation
 
 def truncation_selection(n):
@@ -43,21 +43,26 @@ def truncation_selection(n):
         return random.choice(evaluated_population[:n])[1]
     return f
 
+def _random_slice(sequence_length):
+    start = random.randrange(0, sequence_length - 1)
+    end = random.randrange(start + 1, sequence_length)
+    return slice(start, end)
+
 def mutate(get_mutation):
     def f(individual):
         m = copy.copy(individual)
-        start = random.randrange(0, len(m) - 1)
-        end = random.randrange(start + 1, len(m))
-        m[start : end] = get_mutation()
-        return m
+        m[_random_slice(len(m))] = get_mutation()
+        yield m
     return f
 
-def crossover(individual):
-    # TODO: Implement cross over. Consider a get_slice function.
-    return individual
+def crossover(individual1, individual2):
+    i1 = random.randrange(len(individual1))
+    i2 = random.randrange(len(individual2))
+    yield individual1[:i1] + individual2[i2:]
+    yield individual2[:i2] + individual1[i1:] 
 
 def _reproduce(individual):
-    return individual
+    yield individual
 
 def _pick_operation(operations, random=random.random):
     '''
