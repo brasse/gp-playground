@@ -20,6 +20,7 @@ class WormWindow(pyglet.window.Window):
                                       width=self.window_size,
                                       height=self.window_size,
                                       caption='watchworm')
+        self.set_location(300, 300)
         pyglet.clock.schedule_interval(self.step, self.STEP_TIME)
         
     def step(self, dt):
@@ -44,8 +45,7 @@ class WormWindow(pyglet.window.Window):
                     chain([self.head_color], repeat(self.BODY_COLOR)))
         for cell_position, color in reversed(list(worm)):
             self.draw_cell(cell_position, color)
-        
-            
+
 def process(grid_size, path):
     window = WormWindow(grid_size, path)
     pyglet.app.run()

@@ -30,7 +30,7 @@ def turn(heading, turn_right):
 
     return (heading + (1 if turn_right else -1)) % 4
 
-def move(position, heading, grid_size):
+def move(position, heading, grid_size, harsh):
     '''
     Move one step forward and return the new position. If the now position
     is outside the grid, return the old position.
@@ -60,20 +60,25 @@ def move(position, heading, grid_size):
 
     np = add(position, DELTA[heading])
     if np[0] < 0 or np[1] < 0 or np[0] >= grid_size or np[1] >= grid_size:
-        return position
+        if harsh:
+            raise Exception('Worm left the grid and died.')
+        else:
+            return position
     else:
         return np
     
-def step(program, instruction_index, position, heading, grid_size):
+def step(program, instruction_index, position, heading, grid_size, harsh):
     instruction = program[instruction_index % len(program)]
     if instruction == TURN_LEFT or instruction == TURN_RIGHT:
-        return (instruction_index + 1, position,
+        return (instruction_index + 1, 
+                position,
                 turn(heading, instruction == TURN_RIGHT))
     else:
-        return (instruction_index + 1, move(position, heading, grid_size),
+        return (instruction_index + 1, 
+                move(position, heading, grid_size, harsh),
                 heading)
 
-def run(program, position, heading, grid_size, max_steps):
+def run(program, position, heading, grid_size, max_steps, harsh=False):
     '''
     Run the program for max_steps number of steps and return the path
     that the worm travelled. The same position may appear in sequence
@@ -92,7 +97,8 @@ def run(program, position, heading, grid_size, max_steps):
     instruction_index = 0
     for _ in xrange(max_steps):
         instruction_index, position, heading = \
-            step(program, instruction_index, position, heading, grid_size)
+            step(program, instruction_index, position, heading, grid_size,
+                 harsh)
         path.append(position)
     return path
 
@@ -100,10 +106,13 @@ def random_program(length):
     return [random.choice((TURN_LEFT, TURN_RIGHT, MOVE_FORWARD))
             for _ in xrange(length)]
 
-def fitness(position, heading, grid_size, max_steps):
+def fitness(position, heading, grid_size, max_steps, alfa, harsh):
     def f(program):
-        path = run(program, position, heading, grid_size, max_steps)
-        return len(set(path))
+        try:
+            path = run(program, position, heading, grid_size, max_steps, harsh)
+            return len(set(path)) - alfa * len(program)
+        except:
+            return 0
     return f
 
 def test():
@@ -117,11 +126,13 @@ if __name__ == '__main__':
     start_heading = NORTH
     grid_size = 10
     max_steps = pow(grid_size, 2) * 2
+    alfa = 0.2
+    harsh = False
     fitness_function = fitness(start_position, start_heading,
-                               grid_size, max_steps)
+                               grid_size, max_steps, alfa, harsh)
     selection_function = gp.truncation_selection(keep)
-    operations = [(0.05, gp.mutate(functools.partial(random_program, 5))),
-                  (0.15, gp.crossover)]
+    operations = [(0.10, gp.mutate(functools.partial(random_program, 5))),
+                  (0.70, gp.crossover)]
 
     step_seq = itertools.chain(itertools.repeat(5, 5),
                                itertools.repeat(100, 5),
@@ -135,11 +146,11 @@ if __name__ == '__main__':
                            termination_condition)
         g += steps
         path = run(population[0], start_position, start_heading,
-                   grid_size, max_steps)
+                   grid_size, max_steps, harsh)
         print 'generation: %d' % g
-        fitness = len(set(path))
+        fitness = fitness_function(population[0])
         print 'fitness:    %d (%.2f)' % (fitness,
-                                         fitness / pow(grid_size, 2.0)) 
+                                         len(set(path)) / pow(grid_size, 2.0)) 
         print 'length:     %d' % len(population[0])
         print
         watchworm.process(grid_size, path)
