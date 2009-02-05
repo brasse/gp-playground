@@ -106,14 +106,23 @@ def random_program(length):
     return [random.choice((TURN_LEFT, TURN_RIGHT, MOVE_FORWARD))
             for _ in xrange(length)]
 
-def fitness(position, heading, grid_size, max_steps, alfa, harsh):
+def fitness(position, heading, grid_size, max_steps, harsh):
     def f(program):
         try:
             path = run(program, position, heading, grid_size, max_steps, harsh)
-            return len(set(path)) - alfa * len(program)
+#            return (len(set(path)), len(program))
+            return len(set(path))
         except:
             return 0
     return f
+
+def fitness_order(x, y):
+    c1, l1 = x
+    c2, l2 = y
+    r = cmp(c2, c1)
+    if r:
+        return r
+    return cmp(l1, l2)
 
 def test():
     import doctest
@@ -126,10 +135,9 @@ if __name__ == '__main__':
     start_heading = NORTH
     grid_size = 10
     max_steps = pow(grid_size, 2) * 2
-    alfa = 0.2
     harsh = False
     fitness_function = fitness(start_position, start_heading,
-                               grid_size, max_steps, alfa, harsh)
+                               grid_size, max_steps, harsh)
     selection_function = gp.truncation_selection(keep)
     operations = [(0.10, gp.mutate(functools.partial(random_program, 5))),
                   (0.70, gp.crossover)]
@@ -141,7 +149,7 @@ if __name__ == '__main__':
     while True:
         steps = step_seq.next()
         termination_condition = lambda ep, g: g == steps
-        population = gp.gp(population, fitness_function,
+        population = gp.gp(population, fitness_function, lambda x,y: cmp(y,x),
                            selection_function, operations,
                            termination_condition)
         g += steps
@@ -149,7 +157,7 @@ if __name__ == '__main__':
                    grid_size, max_steps, harsh)
         print 'generation: %d' % g
         fitness = fitness_function(population[0])
-        print 'fitness:    %d (%.2f)' % (fitness,
+        print 'fitness:    %r (%.2f)' % (fitness,
                                          len(set(path)) / pow(grid_size, 2.0)) 
         print 'length:     %d' % len(population[0])
         print
